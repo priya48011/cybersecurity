@@ -11,7 +11,7 @@ My journey in computer science has led me to develop a passion for cybersecurity
 
 | Skill                                         | Associated Project         |
 |-----------------------------------------------|----------------------------|
-| Virtual Network Attack and Defense Simulation | <a href="https://github.com/priya48011/Virtual-Network-Attack-and-Defense-Simulation">Detection Lab</a>|
+| Home Lab Setup, Virtual Network Attack and Defense Simulation | <a href="https://github.com/priya48011/Virtual-Network-Attack-and-Defense-Simulation">Detection Lab</a>|
 | SIEM Implementation and Log Analysis          | <a href="https://google.com">Detection Lab</a>|
 | Network Traffic Monitoring and Attack Detection | <a href="https://google.com">Detection Lab</a>|
 | Security Automation with Shuffle SOAR         | SOC Automation Lab|
