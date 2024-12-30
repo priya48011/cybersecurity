@@ -13,6 +13,7 @@ My journey in computer science has led me to develop a passion for cybersecurity
 |-----------------------------------------------|----------------------------|
 | Home Lab Setup, Virtual Network Attack and Defense Simulation | <a href="https://github.com/priya48011/Virtual-Network-Attack-and-Defense-Simulation">Detection Lab</a>|
 | SSH Protection Using Fail2Ban         | <a href="https://github.com/priya48011/Fail2Ban/tree/main">Detection Lab</a>|
+| Apache Web Server Inatallation and Configuration on Ubuntu         | <a href="https://github.com/priya48011/Fail2Ban/tree/main">Detection Lab</a>|
 
 
 ## Tools
