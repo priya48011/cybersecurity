@@ -24,18 +24,18 @@
     PS C:\> .\STIG-ID-WN10-CC-000005
 #>
 
-# Define the base registry path
+# Define registry path and value
 $registryPath = "HKLM:\SOFTWARE\Policies\Microsoft\Windows\Personalization"
+$valueName = "NoLockScreenCamera"
+$valueData = 1
 
-# Ensure the registry path exists
+# Create the registry key if it doesn't exist
 if (-not (Test-Path $registryPath)) {
     New-Item -Path $registryPath -Force
 }
 
-# STIG: WN10-CC-000010 - Disable Lock Screen Slideshow
-Set-ItemProperty -Path $registryPath -Name "NoLockScreenSlideshow" -Value 1 -Type DWord
+# Set the registry value
+Set-ItemProperty -Path $registryPath -Name $valueName -Value $valueData -Type DWord
 
-# STIG: WN10-CC-000005 - Disable Lock Screen Camera
-Set-ItemProperty -Path $registryPath -Name "NoLockScreenCamera" -Value 1 -Type DWord
+Write-Host "STIG WN10-CC-000005 has been remediated. NoLockScreenCamera set to 1."
 
-Write-Host "STIGs WN10-CC-000010 and WN10-CC-000005 have been remediated."
