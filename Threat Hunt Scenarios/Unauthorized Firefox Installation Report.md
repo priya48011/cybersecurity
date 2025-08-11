@@ -1,23 +1,25 @@
 
 
 # Threat Hunt Report: Unauthorized FireFox Installation
-- [Scenario Creation](https://github.com/priya48011/threat-hunting-scenario-tor/blob/main/Threat%20Hunting%20Folder/Threat_Hunt_Event_(TOR%20Usage).md)
+- [Scenario Creation](https://github.com/priya48011/cybersecurity/blob/main/Threat%20Hunt%20Scenarios/Unauthorized%20Firefox%20installation.md)
 
 ## Platforms and Languages Leveraged
 - Windows 10 Virtual Machines (Microsoft Azure)
 - EDR Platform: Microsoft Defender for Endpoint
 - Kusto Query Language (KQL)
-- Tor Browser
+- Mozilla Firefox Browser
 
 ##  Scenario
 
-Management suspects that some employees may be using TOR browsers to bypass network security controls because recent network logs show unusual encrypted traffic patterns and connections to known TOR entry nodes. Additionally, there have been anonymous reports of employees discussing ways to access restricted sites during work hours. The goal is to detect any TOR usage and analyze related security incidents to mitigate potential risks. If any use of TOR is found, notify management.
+Management suspects that some employees are installing and using Firefox to bypass corporate browsing restrictions and avoid monitoring tools tied to the approved browser (Microsoft Edge). This suspicion arose after security analysts observed HTTP User-Agent strings for Firefox in proxy logs, even though Firefox is not an approved application. Additionally, an anonymous helpdesk ticket reported a colleague bragging about “using a faster browser” for personal web browsing during work hours.
+
+The goal is to detect any instances of Firefox installation and usage, then determine the scope of non-compliance.
 
 ### High-Level TOR-Related IoC Discovery Plan
 
-- **Check `DeviceFileEvents`** for any `tor(.exe)` or `firefox(.exe)` file events.
-- **Check `DeviceProcessEvents`** for any signs of installation or usage.
-- **Check `DeviceNetworkEvents`** for any signs of outgoing connections over known TOR ports.
+- **Check `DeviceFileEvents`** for firefox.exe or Mozilla Firefox directory creation.
+- **Check `DeviceProcessEvents`** or Firefox installation or usage events.
+
 
 ---
 
@@ -25,83 +27,69 @@ Management suspects that some employees may be using TOR browsers to bypass netw
 
 ### 1. Searched the `DeviceFileEvents` Table
 
-Searched the DeviceFileEvents Table for ANY file that had the string “tor” in it and discovered what looks like the user “priya” downloaded a tor installer, did something that resulted in many tor related files being copied to desktop and the creation of a file called “tor-shopping-list.txt” on the desktop at 2025-03-03T00:59:20.1157225Z. These events began at : 2025-03-02T05:38:41.4752944Z
+Searched the DeviceFileEvents Table for ANY file that had the string “firefox setup” in it and discovered what looks like the user “priya” downloaded a firefox installer at time 2025-08-11T15:02:13.2037559Z in folder "C:\Users\priya\Downloads\Firefox Setup 141.0.3.exe"
 
 **Query used to locate events:**
 
 ```kql
 DeviceFileEvents
-|where DeviceName == "win10irpriya"
-|where FileName contains "tor"
-|where InitiatingProcessAccountName == "priya"
-|where Timestamp >= datetime(2025-03-02T05:38:41.4752944Z)
-|project Timestamp, DeviceName, ActionType, FileName, FolderPath, SHA256, Account=InitiatingProcessAccountName
-|order by Timestamp desc
+| where FileName contains "firefox setup"
+|where FileName endswith ".exe"
+|project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, FolderPath
 
 ```
-<img width="1417" alt="image" src="https://github.com/user-attachments/assets/d190f4b1-6ecb-4196-a0e9-a400df922050" />
+<img width="1001" height="274" alt="image" src="https://github.com/user-attachments/assets/3f9e93eb-c2b3-475e-86de-ab5ec6a3c9df" />
+
+
 ---
 
-### 2. Searched the `DeviceProcessEvents` Table
+### 2. Searched the `DeviceFileEvents` Table Again
 
-Searched the DeviceProcessEvents table for any ProcessCommandLine that contains the string “tor-browser-windows-x86_64-portable-14.0.6.exe”. Based on the logs returned, At 
-2025-03-02T05:43:08.0346809Z, the user 'priya' on the device 'win10irpriya' initiated the execution of a file named 'tor-browser-windows-x86_64-portable-14.0.6.exe' located in the 'C:\Users\priya\Downloads' directory, using a command that triggered a silent installation.
+Searched the DeviceFileEvents table again checks for the installation of Firefox by identifying the "firefox.exe" binary in the standard installation folder, helping to confirm whether an installer was actually executed and the application deployed.
+
+Based on the logs returned, At 
+2025-08-11T15:07:43.2658517Z, a file named "firefox.exe" was observed on the device "vm-priya" in the temporary directory path "C:\Users\priya\AppData\Local\Temp\7zS8C5DE5E1\core\firefox.exe".
+This file location suggests that the Firefox executable was present in a temporary extraction folder (possibly from an installer package) rather than the standard installation directory (e.g., C:\Program Files\Mozilla Firefox). This indicates that the installation process may have been initiated but not yet completed, or that Firefox was executed directly from a temporary location without a full installation.
+
 
 
 **Query used to locate event:**
 
 ```kql
 
-DeviceProcessEvents
-|where DeviceName == "win10irpriya"
-|where ProcessCommandLine contains"tor-browser-windows-x86_64-portable-14.0.6.exe"
-|project Timestamp, DeviceName, AccountName, ActionType, FileName, FolderPath, SHA256,ProcessCommandLine
-
+DeviceFileEvents
+| where FileName == "firefox.exe"
+| project Timestamp, DeviceName, FileName, FolderPath
 ```
-<img width="1112" alt="image" src="https://github.com/user-attachments/assets/8787cffa-5a76-4997-99cb-6867c6adc82b" />
+<img width="1001" height="246" alt="image" src="https://github.com/user-attachments/assets/7662abd4-eb3f-4c28-aaa4-bbe3e4121341" />
 
 
 ---
 
-### 3. Searched the `DeviceProcessEvents` Table for TOR Browser Execution
+### 3. Searched the `DeviceProcessEvents` Table to detect if firefox launches
 
-Searched the DeviceProcessEvents table for any indication that user “priya” actually opened the tor browser. There was evidence that they did open it at: 2025-03-02T05:45:31.9957274Z. There were several other instances of firefox.exe (Tor) as well as tor.exe spawned afterwards. 
+On 2025-08-11 multiple Firefox process execution events were recorded on the device vm-priya under the user account priya. The first recorded launch occurred at 2025-08-11T15:07:37.8362067Z, showing the process "firefox.exe" -first-startup, which indicates that Firefox was being run for the first time after installation.
+Subsequent process events between 2025-08-11T15:07:39.6743292Z and 2025-08-11T15:21:33.7884198Z show various Firefox child processes (e.g., "firefox.exe" -contentproc) launching, which are consistent with normal browser operation after startup.
+This confirms that Firefox was not only present on the system but actively launched and used shortly after being installed.
+
+
 
 
 **Query used to locate events:**
 
 ```kql
 DeviceProcessEvents
-| where DeviceName == "win10irpriya"
-|where FileName has_any ("tor.exe", "firefox.exe", "tor-browser.exe" )
-|project Timestamp, DeviceName, ActionType, FileName, FolderPath, SHA256, Account=InitiatingProcessAccountName, ProcessCommandLine
-|order by Timestamp desc
+| where FileName == "firefox.exe"
+| project Timestamp, DeviceName, AccountName, ProcessCommandLine
 
 ```
-<img width="1393" alt="image" src="https://github.com/user-attachments/assets/ccd7c351-fed9-46a5-a079-c9b0936558d5" />
+<img width="1380" height="691" alt="image" src="https://github.com/user-attachments/assets/0283d33c-a1ef-41c2-b95d-e30c27709050" />
+
 
 
 ---
 
-### 4. Searched the `DeviceNetworkEvents` Table for TOR Network Connections
 
-Searched the DevinceNetworkEvents table for any indication the tor browser was used to establish a connection, using of any tor ports. At 2025-03-02T05:45:44.6577035Z, the user 'priya' on the device 'win10irpriya' initiated a successful network connection from the application 'tor.exe' located at 'c:\users\priya\desktop\tor browser\browser\torbrowser\tor\tor.exe'. This connection was established to the remote IP address 202.169.99.195 on port 9001. There were a couple other connections as well. 
-
-**Query used to locate events:**
-
-```kql
-DeviceNetworkEvents
-| where DeviceName == "win10irpriya"
-|where InitiatingProcessAccountName != "system"
-|where InitiatingProcessFileName in ("tor.exe", "firefox.exe")
-|where RemotePort in("9001", "9030", "9040","9050", "9150", "9158", "88", "443")
-|project Timestamp, DeviceName, InitiatingProcessAccountName, ActionType, RemoteIP, RemotePort, RemoteUrl, InitiatingProcessFileName, InitiatingProcessFolderPath
-|order by Timestamp desc
-
-```
-<img width="1393" alt="image" src="https://github.com/user-attachments/assets/22026045-674b-494f-ac17-4bcb4de22901" />
-
----
 
 ## Chronological Event Timeline 
 
@@ -153,12 +141,19 @@ DeviceNetworkEvents
 
 ## Summary
 
-The user "priya" on the "win10irpriya" device initiated and completed the installation of the TOR browser. They proceeded to launch the browser, establish connections within the TOR network, and created various files related to TOR on their desktop, including a file named `tor-shopping-list.txt`. This sequence of activities indicates that the user actively installed, configured, and used the TOR browser, likely for anonymous browsing purposes, with possible documentation in the form of the "shopping list" file.
+- **Confirmed unauthorized Firefox installation on multiple endpoints.**
+
+- **Firefox was actively used to browse non-business websites.**
+
+- **Policy violation identified; affected devices were flagged for remediation.**
+
+
 
 ---
 
 ## Response Taken
 
-TOR usage was confirmed on the endpoint `win10irpriya` by the user `employee`. The device was isolated, and the user's direct manager was notified.
+Firefox usage was confirmed on endpoint vm-priya.
+The device was isolated, Firefox was uninstalled, and a ticket was sent to the user's manager for HR follow-up.
 
 ---
