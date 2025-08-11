@@ -1,11 +1,11 @@
-# Threat Event (Unauthorized Chrome Installation)
-**Google Chrome Installed Without Authorization on Corporate Device**
+# Threat Event (Unauthorized Firefox Installation)
+**Mozilla Firefox Installed Without Authorization on Corporate Device**
 
 ## Steps the "Bad Actor" took Create Logs and IoCs:
-1. Downloaded Chrome installer from: https://dl.google.com/chrome/install/latest/chrome_installer.exe
+1. Downloaded Firefox installer from: https://download.mozilla.org/?product=firefox-latest&os=win64&lang=en-US
 2. Ran the installer manually with default settings.
-3. Chrome installed in: C:\Program Files\Google\Chrome\Application\chrome.exe
-4. Opened Chrome and browsed to several non-work-related sites.
+3. Firefox installed in: C:\Program Files\Mozilla Firefox\firefox.exe
+4. Opened Firefox and browsed to several non-work-related sites.
 
 ---
 
@@ -14,19 +14,8 @@
 |---------------------|------------------------------------------------------------------------------|
 | **Name**| DeviceFileEvents|
 | **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceinfo-table|
-| **Purpose**| Used for detecting TOR download and installation, as well as the shopping list creation and deletion. |
+| **Purpose**| Detects the Firefox installer download and the creation of firefox.exe in the application folder. |
 
-| **Parameter**       | **Description**                                                              |
-|---------------------|------------------------------------------------------------------------------|
-| **Name**| DeviceProcessEvents|
-| **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceinfo-table|
-| **Purpose**| Used to detect the silent installation of TOR as well as the TOR browser and service launching.|
-
-| **Parameter**       | **Description**                                                              |
-|---------------------|------------------------------------------------------------------------------|
-| **Name**| DeviceNetworkEvents|
-| **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicenetworkevents-table|
-| **Purpose**| Used to detect TOR network activity, specifically tor.exe and firefox.exe making connections over ports to be used by TOR (9001, 9030, 9040, 9050, 9051, 9150).|
 
 ---
 
