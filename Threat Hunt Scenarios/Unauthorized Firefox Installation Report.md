@@ -93,49 +93,36 @@ DeviceProcessEvents
 
 ## Chronological Event Timeline 
 
-### 1. File Download - TOR Installer
+### 1. File Download - Firefox Installer
 
-- **Timestamp:** `2025-03-02T05:38:41.4752944Z`
-- **Event:** The user “priya” downloaded a file named “tor-browser-windows-x86_64-portable-14.0.6.exe” to the Downloads folder.
+- **Timestamp:** `2025-08-11T15:02:13.2037559Z`
+- **Event:** The user "priya" downloaded a file named "Firefox Setup 141.0.3.exe" to the Downloads folder.
 - **Action:** File download detected.
-- **File Path:** `C:\Users\priya\Downloads\tor-browser-windows-x86_64-portable-14.0.6.exe`
+- **File Path:** `C:\Users\priya\Downloads\Firefox Setup 141.0.3.exe`
 
-### 2. Process Execution - TOR Browser Installation
+### 2. File Execution - Firefox Executable in Temp Folder
 
-- **Timestamp:** `2025-03-02T05:43:08.0346809Z`
-- **Event:** The user "priya" executed the file “tor-browser-windows-x86_64-portable-14.0.6.exe” in silent mode, initiating a background installation of the TOR Browser.
+- **Timestamp:** `2025-08-11T15:07:43.2658517Z`
+- **Event:** A file named "firefox.exe" was created in the temporary extraction folder.
+- **Action:** File creation detected; indicates installer extraction or portable execution.
+- **File Path:** `C:\Users\priya\AppData\Local\Temp\7zS8C5DE5E1\core\firefox.exe`
+
+### 3. Process Execution - First Firefox Launch
+
+- **Timestamp:** `2025-08-11T15:07:37.8362067Z`
+- **Event:** Firefox was launched with the "-first-startup" parameter, suggesting the first execution after installation.
 - **Action:** Process creation detected.
-- **Command:** `tor-browser-windows-x86_64-portable-14.0.6.exe /S`
-- **File Path:** `C:\Users\priya\Downloads\tor-browser-windows-x86_64-portable-14.0.6.exe`
+- **Command Line:** `firefox.exe -first-startup`
+- **Device:** `vm-priya`
+- **User:** `priya`
 
-### 3. Process Execution - TOR Browser Launch
+### 4. Process Execution - Subsequent Firefox Activity
 
-- **Timestamp:** `2025-03-02T05:45:31.9957274Z`
-- **Event:** User "priya" opened the TOR browser. Subsequent processes associated with TOR browser, such as `firefox.exe` and `tor.exe`, were also created, indicating that the browser launched successfully.
-- **Action:** Process creation of TOR browser-related executables detected.
-- **File Path:** `C:\Users\priya\Desktop\Tor Browser\Browser\firefox.exe`
-
-### 4. Network Connection - TOR Network
-
-- **Timestamp:** `2025-03-02T05:45:44.6577035Z`
-- **Event:** A network connection to IP “202.169.99.195” on port “9001” by user "priya" was established using `tor.exe`, confirming TOR browser network activity.
-- **Action:** Connection success.
-- **Process:** `tor.exe`
-- **File Path:** `c:\users\priya\desktop\tor browser\browser\torbrowser\tor\tor.exe`
-
-### 5. Additional Network Connections - TOR Browser Activity
-
-- **Timestamps:**
-  - `2025-03-02T05:45:57.0201471Z` - Local connection to '127.0.0.1' on port '9150'.
-- **Event:** Additional TOR network connections were established, indicating ongoing activity by user "priya" through the TOR browser.
-- **Action:** Multiple successful connections detected.
-
-### 6. File Creation - TOR Shopping List
-
-- **Timestamp:** `2025-03-03T00:59:20.1157225Z`
-- **Event:** The user "priya" created a file named `tor-shopping-list.txt` on the desktop, potentially indicating a list or notes related to their TOR browser activities.
-- **Action:** File creation detected.
-- **File Path:** `C:\Users\priya\Desktop\tor-shopping-list.txt`
+- **Timestamp:** `2025-08-11T15:07:39.6743292Z → 2025-08-11T15:21:33.7884198Z`
+- **Event:** Multiple Firefox child processes launched (e.g., -contentproc), consistent with active browsing sessions.
+- **Action:** Ongoing process creation detected.
+- **Device:** `vm-priya`
+- **User:** `priya`
 
 ---
 
