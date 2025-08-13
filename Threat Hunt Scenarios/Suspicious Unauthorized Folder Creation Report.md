@@ -31,18 +31,22 @@ Management suspects that some users are creating unauthorized folders on their d
 
 ### 1. Searched the `DeviceFileEvents` Table
 
-Searched the DeviceFileEvents Table for ANY file that had the string “firefox setup” in it and discovered what looks like the user “priya” downloaded a firefox installer at time 2025-08-11T15:02:13.2037559Z in folder "C:\Users\priya\Downloads\Firefox Setup 141.0.3.exe"
+1. Searched the DeviceFileEvents Table for Folder Creation
+The first step was to identify any suspicious folder creation events on the user’s desktop. A search was performed in the DeviceFileEvents table for files or shortcuts indicating a newly created folder.
+
+From the results, a file named SecretData.lnk was created by user priya on device vm-priya. This event was recorded at 2025-08-13T10:15:12Z in the folder path C:\Users\priya, suggesting that the user created a shortcut (or folder reference) for the folder SecretData.
 
 **Query used to locate events:**
 
 ```kql
 DeviceFileEvents
-| where FileName contains "firefox setup"
-|where FileName endswith ".exe"
-|project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, FolderPath
+| where ActionType == "FileCreated"
+| where FileName contains "SecretData"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, ActionType, FolderPath
+|order  by Timestamp desc
 
 ```
-<img width="1001" height="274" alt="image" src="https://github.com/user-attachments/assets/3f9e93eb-c2b3-475e-86de-ab5ec6a3c9df" />
+<img width="1075" height="254" alt="image" src="https://github.com/user-attachments/assets/505bae47-9835-44be-84fe-1f6c3b21b786" />
 
 
 ---
