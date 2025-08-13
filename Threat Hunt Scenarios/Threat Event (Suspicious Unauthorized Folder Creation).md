@@ -32,8 +32,10 @@ Unusual system behavior: Management wants to check if users are creating or modi
 ```kql
 // Detect folder creation on Desktop
 DeviceFileEvents
-| where FolderPath contains "Desktop\\SecretData"
-| project Timestamp, DeviceName, RequestAccountName, ActionType, FileName
+| where ActionType == "FileCreated"
+| where FileName contains "SecretData"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, ActionType, FolderPath
+|order  by Timestamp desc
 
 // Detect file creation inside folder
 DeviceFileEvents
