@@ -15,10 +15,10 @@ Management suspects that some employees are installing and using Firefox to bypa
 
 The goal is to detect any instances of Firefox installation and usage, then determine the scope of non-compliance.
 
-### High-Level TOR-Related IoC Discovery Plan
+### High-Level IoC Discovery Plan
 
 - **Check `DeviceFileEvents`** for firefox.exe or Mozilla Firefox directory creation.
-- **Check `DeviceProcessEvents`** or Firefox installation or usage events.
+- **Check `DeviceProcessEvents`** for Firefox installation or usage events.
 
 
 ---
