@@ -1,7 +1,7 @@
 
 
 # Threat Hunt Report: Unauthorized Folder Creation 
-- [Scenario Creation](https://github.com/priya48011/cybersecurity/blob/main/Threat%20Hunt%20Scenarios/Unauthorized%20Firefox%20installation.md)
+- [Scenario Creation](https://github.com/priya48011/cybersecurity/blob/main/Threat%20Hunt%20Scenarios/Threat%20Event%20Suspicious%20Unauthorized%20Folder%20Creation.md)
 
 ## Platforms and Languages Leveraged
 - Windows 10 Virtual Machines (Microsoft Azure)
