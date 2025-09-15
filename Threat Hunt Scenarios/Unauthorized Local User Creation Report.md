@@ -65,7 +65,7 @@ DeviceProcessEvents
 
 ### 3. Searched the `DeviceLogonEvents` Table to detect if user logged in
 
-On 2025-09-15T17:19:09.7487224Z, 'labuser' logged in to 'hacker' account for the first time, followed by multiple login attempts but no suspicious activity finds out. 
+On 2025-09-15T17:19:09.7487224Z, User logged in to 'hacker' account for the first time, followed by multiple login attempts but no suspicious activity finds out. 
 
 **Query used to locate events:**
 
