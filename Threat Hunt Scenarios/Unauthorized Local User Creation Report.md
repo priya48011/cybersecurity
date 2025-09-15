@@ -7,83 +7,76 @@
 - Windows 10 Virtual Machines (Microsoft Azure)
 - EDR Platform: Microsoft Defender for Endpoint
 - Kusto Query Language (KQL)
-- Mozilla Firefox Browser
+- PowerShell
 
 ##  Scenario
 
-Management suspects that some employees are installing and using Firefox to bypass corporate browsing restrictions and avoid monitoring tools tied to the approved browser (Microsoft Edge). This suspicion arose after security analysts observed HTTP User-Agent strings for Firefox in proxy logs, even though Firefox is not an approved application. Additionally, an anonymous helpdesk ticket reported a colleague bragging about “using a faster browser” for personal web browsing during work hours.
+Management suspects that an unauthorized local user account may have been created on endpoints to maintain persistence and bypass normal access controls. This suspicion arose after anomalous security events were detected in SecurityEvent logs (EventID 4720: user account created).
 
-The goal is to detect any instances of Firefox installation and usage, then determine the scope of non-compliance.
+The goal is to detect any new local user accounts, verify their creation, and determine if elevated privileges were assigned.
 
 ### High-Level IoC Discovery Plan
 
-- **Check `DeviceFileEvents`** for firefox.exe or Mozilla Firefox directory creation.
-- **Check `DeviceProcessEvents`** for Firefox installation or usage events.
-
+- **Check `DeviceProcessEvents`** for execution of commands like net user /add or net localgroup administrators.
+- **Check `DeviceLogonEvents`** for login and any suspicious action
 
 ---
 
 ## Steps Taken
 
-### 1. Searched the `DeviceFileEvents` Table
+### 1. Searched the `DeviceProcessEvents` Table
 
-Searched the DeviceFileEvents Table for ANY file that had the string “firefox setup” in it and discovered what looks like the user “priya” downloaded a firefox installer at time 2025-08-11T15:02:13.2037559Z in folder "C:\Users\priya\Downloads\Firefox Setup 141.0.3.exe"
+Searched for any process execution involving net user to detect account creation. No additional file-based proof of activity (like desktop files) was performed.
 
-**Query used to locate events:**
-
-```kql
-DeviceFileEvents
-| where FileName contains "firefox setup"
-|where FileName endswith ".exe"
-|project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, FolderPath
-
-```
-<img width="1001" height="274" alt="image" src="https://github.com/user-attachments/assets/3f9e93eb-c2b3-475e-86de-ab5ec6a3c9df" />
-
-
----
-
-### 2. Searched the `DeviceFileEvents` Table Again
-
-Searched the DeviceFileEvents table again checks for the installation of Firefox by identifying the "firefox.exe" binary in the standard installation folder, helping to confirm whether an installer was actually executed and the application deployed.
-
-Based on the logs returned, At 
-2025-08-11T15:07:43.2658517Z, a file named "firefox.exe" was observed on the device "vm-priya" in the temporary directory path "C:\Users\priya\AppData\Local\Temp\7zS8C5DE5E1\core\firefox.exe".
-This file location suggests that the Firefox executable was present in a temporary extraction folder (possibly from an installer package) rather than the standard installation directory (e.g., C:\Program Files\Mozilla Firefox). This indicates that the installation process may have been initiated but not yet completed, or that Firefox was executed directly from a temporary location without a full installation.
-
-
-
-**Query used to locate event:**
-
-```kql
-
-DeviceFileEvents
-| where FileName == "firefox.exe"
-| project Timestamp, DeviceName, FileName, FolderPath
-```
-<img width="1001" height="246" alt="image" src="https://github.com/user-attachments/assets/7662abd4-eb3f-4c28-aaa4-bbe3e4121341" />
-
-
----
-
-### 3. Searched the `DeviceProcessEvents` Table to detect if firefox launches
-
-On 2025-08-11 multiple Firefox process execution events were recorded on the device vm-priya under the user account priya. The first recorded launch occurred at 2025-08-11T15:07:37.8362067Z, showing the process "firefox.exe" -first-startup, which indicates that Firefox was being run for the first time after installation.
-Subsequent process events between 2025-08-11T15:07:39.6743292Z and 2025-08-11T15:21:33.7884198Z show various Firefox child processes (e.g., "firefox.exe" -contentproc) launching, which are consistent with normal browser operation after startup.
-This confirms that Firefox was not only present on the system but actively launched and used shortly after being installed.
-
-
-
+Based on the logs returned, At 2025-09-15T17:08:28.5752212Z, an account was created from name 'hacker' by user 'labuser'. 
 
 **Query used to locate events:**
 
 ```kql
 DeviceProcessEvents
-| where FileName == "firefox.exe"
-| project Timestamp, DeviceName, AccountName, ProcessCommandLine
+| where ProcessCommandLine has_any ("net", "user")
+| where ProcessCommandLine has "/add"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, ProcessCommandLine
 
 ```
-<img width="1380" height="691" alt="image" src="https://github.com/user-attachments/assets/0283d33c-a1ef-41c2-b95d-e30c27709050" />
+<img width="1075" height="152" alt="image" src="https://github.com/user-attachments/assets/07492e07-f7e9-45c0-9bfd-ab85303d0c18" />
+
+---
+
+### 2. Searched the `DeviceProcessEvents` Table Again
+
+Searched the DeviceProcessEvents table again checks if new account was added to the local Administrators group.
+
+Based on the logs returned, At 2025-09-15T17:09:11.088956Z, account "hacker" was added to local Administrators group.
+
+**Query used to locate event:**
+
+```kql
+
+DeviceProcessEvents
+| where ProcessCommandLine has "localgroup adminstrators"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, ProcessCommandLine
+```
+<img width="1075" height="152" alt="image" src="https://github.com/user-attachments/assets/a2719ed2-622f-40f5-a483-365125614958" />
+
+
+
+---
+
+### 3. Searched the `DeviceLogonEvents` Table to detect if user logged in
+
+On 2025-09-15T17:19:09.7487224Z, 'labuser' logged in to 'hacker' account for the first time, followed by multiple login attempts but no suspicious activity finds out. 
+
+**Query used to locate events:**
+
+```kql
+DeviceLogonEvents
+| where AccountName == "hacker"
+| project Timestamp, DeviceName, AccountName, LogonType, RemoteIP
+
+```
+<img width="1075" height="217" alt="image" src="https://github.com/user-attachments/assets/c544f173-3814-49df-8d4f-214da3f04199" />
+
 
 
 
@@ -93,54 +86,53 @@ DeviceProcessEvents
 
 ## Chronological Event Timeline 
 
-### 1. File Download - Firefox Installer
+### 1. Local Account Creation
 
-- **Timestamp:** `2025-08-11T15:02:13.2037559Z`
-- **Event:** The user "priya" downloaded a file named "Firefox Setup 141.0.3.exe" to the Downloads folder.
-- **Action:** File download detected.
-- **File Path:** `C:\Users\priya\Downloads\Firefox Setup 141.0.3.exe`
+- **Timestamp:** `2025-09-15T17:08:28.5752212Z`
+- **Event:** The user `labuser` executed a command to create a new local account named `hacker`.
+- **Action:** Account creation detected via DeviceProcessEvents.
+- **Device:** `labuser-vm`
+- **Command Line:** `net localgroup administrators hacker /add`
 
-### 2. File Execution - Firefox Executable in Temp Folder
 
-- **Timestamp:** `2025-08-11T15:07:43.2658517Z`
-- **Event:** A file named "firefox.exe" was created in the temporary extraction folder.
-- **Action:** File creation detected; indicates installer extraction or portable execution.
+### 2. Elevated Privileges Assigned
+
+- **Timestamp:** `2025-09-15T17:09:11.088956Z`
+- **Event:** The newly created hacker account was added to the local Administrators group.
+- **Action:** Privilege escalation detected via DeviceProcessEvents.
 - **File Path:** `C:\Users\priya\AppData\Local\Temp\7zS8C5DE5E1\core\firefox.exe`
+- **Device:** `labuser-vm`
+- **Command Line:** `net localgroup administrators hacker /add`
 
-### 3. Process Execution - First Firefox Launch
+### 3. First Login Attempt
 
-- **Timestamp:** `2025-08-11T15:07:37.8362067Z`
-- **Event:** Firefox was launched with the "-first-startup" parameter, suggesting the first execution after installation.
-- **Action:** Process creation detected.
-- **Command Line:** `firefox.exe -first-startup`
-- **Device:** `vm-priya`
-- **User:** `priya`
-
-### 4. Process Execution - Subsequent Firefox Activity
-
-- **Timestamp:** `2025-08-11T15:07:39.6743292Z → 2025-08-11T15:21:33.7884198Z`
-- **Event:** Multiple Firefox child processes launched (e.g., -contentproc), consistent with active browsing sessions.
-- **Action:** Ongoing process creation detected.
-- **Device:** `vm-priya`
-- **User:** `priya`
-
+- **Timestamp:** `2025-09-15T17:19:09.7487224Z`
+- **Event:** User labuser logged in to the hacker account for the first time.
+- **Action:** Login detected via DeviceLogonEvents.
+- **Device:** `labuser-vm`
+- **Account:** `hacker`
+- **Observation:** Multiple login attempts observed; no suspicious activity detected beyond the first login.
 ---
 
 ## Summary
 
-- **Confirmed unauthorized Firefox installation on multiple endpoints.**
+- **Confirmed unauthorized local user creation (hacker).**
 
-- **Firefox was actively used to browse non-business websites.**
+- **Account was added to Administrators group, providing elevated privileges.**
 
-- **Policy violation identified; affected devices were flagged for remediation.**
-
-
+- **No additional activity (login or file creation) was observed**
+- **This scenario demonstrates a persistence technique and insider risk that SOC teams should monitor.**
 
 ---
 
 ## Response Taken
 
-Firefox usage was confirmed on endpoint vm-priya.
-The device was isolated, Firefox was uninstalled, and a ticket was sent to the user's manager for HR follow-up.
+- **Security team flagged the endpoint labuser-vm for review.**
+
+- **The unauthorized user account hacker was removed.**
+
+- **Elevated privileges were revoked.**
+
+- **Incident documented for further HR and IT follow-up.**
 
 ---
