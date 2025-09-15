@@ -28,7 +28,7 @@ The goal is to detect any new local user accounts, verify their creation, and de
 
 Searched for any process execution involving net user to detect account creation. No additional file-based proof of activity (like desktop files) was performed.
 
-Based on the logs returned, At 2025-09-15T17:08:28.5752212Z, an account was created from name 'hacker' by user 'labuser'. 
+Based on the logs returned, At 2025-09-15T17:08:28.5752212Z, an account was created from name 'hacker' 
 
 **Query used to locate events:**
 
