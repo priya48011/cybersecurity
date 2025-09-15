@@ -11,46 +11,47 @@
 1. Create a new local user account: ```net user hackeruser P@ssw0rd123! /add```
 2. Add the new account to the local Administrators group: ```net localgroup administrators hackeruser /add```
 3. Log in with the newly created hackeruser account.
-4. Create a file on the desktop called ```persistence-proof.txt```.
-5. Log out.
 
 ---
 
 ## Tables Used to Detect IoCs:
 | **Parameter**       | **Description**                                                              |
 |---------------------|------------------------------------------------------------------------------|
-| **Name**| DeviceFileEvents|
-| **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceinfo-table|
-| **Purpose**| Detects the Firefox installer download and the creation of firefox.exe in the application folder. |
+| **Name**| DeviceProcessEvents|
+| **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-deviceprocessevents-table|
+| **Purpose**|Detect execution of net user and net localgroup commands.|
+|||
+| **Name**| DeviceLogonEvents|
+| **Info**|https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-devicelogonevents-table|
+| **Purpose**|Detect logins from the newly created hacker account.|
 
 
 ---
 
 ## Related Queries:
 ```kql
-// Detect Firefox installer downloads
-DeviceFileEvents
-| where FileName has "Firefox Setup"
-| where FileName endswith ".exe"
-| project Timestamp, DeviceName, InitiatingProcessAccountName, FileName, FolderPath
-
-// Detect Firefox being installed
-DeviceFileEvents
-| where FileName == "firefox.exe"
-| where FolderPath contains "Mozilla Firefox"
-| project Timestamp, DeviceName, FileName, FolderPath
-
-// Detect Firefox launches
+// Detect suspicious local user creation
 DeviceProcessEvents
-| where FileName == "firefox.exe"
-| project Timestamp, DeviceName, AccountName, ProcessCommandLine
+| where ProcessCommandLine has_any ("net", "user")
+| where ProcessCommandLine has "/add"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, ProcessCommandLine
+
+// Detect adding user to Administrators group
+DeviceProcessEvents
+| where ProcessCommandLine has "localgroup administrators"
+| project Timestamp, DeviceName, InitiatingProcessAccountName, ProcessCommandLine
+
+// Detect logins from suspicious local accounts
+DeviceLogonEvents
+| where AccountName == "hacker"
+| project Timestamp, DeviceName, AccountName, LogonType, RemoteIP
 ```
 
 ---
 
 ## Created By:
 - **Author Name**: Priya Jindal 
-- **Date**: August 11, 2025
+- **Date**: Sept 15, 2025
 
 ## Validated By:
 - **Reviewer Name**: 
@@ -67,5 +68,5 @@ DeviceProcessEvents
 ## Revision History:
 | **Version** | **Changes**                   | **Date**         | **Modified By**   |
 |-------------|-------------------------------|------------------|-------------------|
-| 1.0         | Initial draft                  | `August 11, 2025`  | `Priya Jindal`   
+| 1.0         | Initial draft                  | `Sept 15, 2025`  | `Priya Jindal`   
 
