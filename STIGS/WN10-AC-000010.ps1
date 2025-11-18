@@ -23,30 +23,16 @@
     PS C:\> .\STIG-ID-WN10-AC-000010
 #>
 
-# Allowed accounts for access (accounts that should NOT be denied)
-$allowedAccounts = @("BUILTIN\Administrators","NT AUTHORITY\SYSTEM")
+# Export current local security policy
+secedit.exe /export /cfg C:\Windows\Temp\secpol.cfg
 
-# Export current user rights
-$seceditFile = "$env:TEMP\secpol.cfg"
-secedit /export /cfg $seceditFile
+# Set Account Lockout Threshold to 3 attempts
+(Get-Content C:\Windows\Temp\secpol.cfg) `
+    -replace 'LockoutBadCount = \d+', 'LockoutBadCount = 3' |
+    Set-Content C:\Windows\Temp\secpol.cfg
 
-# Read the current setting for "Deny access to this computer from the network"
-$currentLine = (Get-Content $seceditFile | Where-Object {$_ -like "SeDenyNetworkLogonRight*"})
-$currentAccounts = ($currentLine -replace "SeDenyNetworkLogonRight\s*=\s*","") -split ","
+# Apply updated security policy
+secedit.exe /configure /db C:\Windows\security\local.sdb /cfg C:\Windows\Temp\secpol.cfg /areas SECURITYPOLICY
 
-# Check for unauthorized accounts
-$unauthorized = $currentAccounts | Where-Object {$_ -and ($allowedAccounts -notcontains $_)}
-
-if ($unauthorized.Count -eq 0) {
-    Write-Host "WN10-AC-000010 compliant: No unauthorized accounts are denied network access."
-} else {
-    Write-Host "Unauthorized accounts found: $($unauthorized -join ', ')"
-    Write-Host "Remediating..."
-
-    # Remove unauthorized accounts using ntrights.exe
-    foreach ($user in $unauthorized) {
-        # Requires ntrights.exe from Windows Server 2003 Resource Kit Tools
-        ntrights -r $user -u SeDenyNetworkLogonRight
-    }
-    Write-Host "Remediation complete. Only allowed accounts are denied network access."
-}
+# Cleanup
+Remove-Item C:\Windows\Temp\secpol.cfg -Force
