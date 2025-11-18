@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    This PowerShell script ensures that the Passwords is, at a minimum, of 14 characters.
+    This PowerShell script ensures that the Passwords are, at a minimum, of 14 characters.
 .NOTES
     Author          : Priya
     LinkedIn        : https://www.linkedin.com/in/priya-priya-a36a94222/ 
