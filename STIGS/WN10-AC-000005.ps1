@@ -23,7 +23,7 @@
     PS C:\> .\STIG-ID-WN10-AC-000005
 #>
 
-# Enable Failure auditing for Credential Validation
-auditpol /set /subcategory:"Credential Validation" /failure:enable
 
-Write-Host "WN10-AU-000005 remediated: 'Credential Validation' now audits Failure events."
+net accounts /lockoutduration:15
+
+Write-Host "WN10-AC-000005 remediated: Account lockout duration set to 15 minutes."
