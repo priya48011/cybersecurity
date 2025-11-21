@@ -24,6 +24,5 @@
 #>
 
 
-# WN11-CC-000110 - Disable HTTP Printing
 New-ItemProperty -Path "HKLM:\SOFTWARE\Policies\Microsoft\Windows NT\Printers" `
     -Name "DisableHTTPPrinting" -Value 1 -PropertyType DWord -Force
