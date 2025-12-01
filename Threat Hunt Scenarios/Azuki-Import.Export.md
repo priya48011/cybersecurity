@@ -629,19 +629,25 @@ DeviceNetworkEvents
 
 | Flag | Technique ID        | Technique Name                         | Description                               |
 |------|----------------------|-----------------------------------------|-------------------------------------------|
-| 1    | T1059.001           | PowerShell                              | Script executed with execution policy bypass |
-| 2    | T1036               | Masquerading                            | Fake Defender tamper artifact             |
-| 3    | T1115               | Clipboard Collection                    | Clipboard probing                         |
-| 4,7  | T1033 / T1087       | Account & Session Discovery             | Session/user enumeration                  |
-| 5    | T1083               | File and Directory Discovery            | Storage enumeration                       |
-| 6,10 | T1016               | Network Discovery                       | Connectivity and DNS checks               |
-| 8    | T1057               | Process Discovery                       | tasklist / process enumeration            |
-| 9    | T1069               | Permission Group Discovery              | whoami group mapping                      |
-| 11   | T1074               | Data Staging                            | Recon data archived                       |
-| 12   | T1567               | Exfiltration Over Web                   | Outbound transfer attempt                 |
-| 13   | T1053.005           | Scheduled Task                          | Persistence via SupportToolUpdater        |
-| 14   | T1547.001           | Registry Run Key                        | Autorun fallback persistence              |
-| 15   | T1036.004           | Masquerading: Deception Artifact        | Fake support chat log                     |
+| 1    | T1078.002          | Valid Accounts                             |  Domain Accounts	Attacker used stolen admin credentials (RDP logon from 88.97.178.12)|
+| 2    | T1078              | Valid Accounts                      | Compromised admin account kenji.sato used for all malicious activity|
+| 3    | T1046              | Network Service Scanning                    |   ARP scanning to enumerate nearby hosts using "ARP.EXE" -a |   
+| 4    | T1587.001       | Develop Capabilities             | Malware	Creation of hidden malware staging directory C:\ProgramData\WindowsCache.                  |
+| 5, 6   | T1562.001              | Impair Defenses: Disable or Modify Tools          | Added file extension and Temp folder exclusions to bypass Microsoft Defender scanning.                       |
+| 7 | T1105              |  Ingress Tool Transfer                      | Abuse of certutil.exe to download malicious payloads |
+| 8	| T1053.005	|Scheduled Task/Job	| Created scheduled task “Windows Update Check” for persistence |
+| 9 |	T1543.003	|Create or Modify System Process: Windows Service |	Scheduled task executing backdoor svchost.exe from WindowsCache |
+| 10 |	T1095	| Non-Application Layer Protocol|	Communication with external C2 server 78.141.196.6 |
+| 11 |	T1571	| Non-Standard Port |	C2 communication over port 443 (TLS to blend with normal traffic) |
+| 12 |	T1003.001 |	Credential Dumping: LSASS	| Credential theft tool mm.exe used to access LSASS memory |
+| 13 |	T1003.001	| Credential Dumping	| Use of module sekurlsa::logonpasswords to extract passwords |
+| 14 |T1074.001	| Data Staged: Local Data Staging | Staged stolen data into export-data.zip |
+|15	|T1567.002 |	Exfiltration to Cloud Storage |	Exfiltration through Discord API endpoint |
+| 16 |	T1070.001	|Clear Windows Event Logs	|Cleared Security event log using wevtutil.exe|
+|17|	T1136.001|	Create Account: Local Account |	Created hidden backdoor account support |
+|18	|T1059.001	|PowerShell |	Malicious script wupdate.ps1 used to automate workflow |
+|19	|T1021.001	|Remote Services: RDP	|Attempted lateral movement to 10.1.0.188 using RDP |
+|20	| T1021.001 |	Remote Services: RDP	| Lateral movement executed using mstsc.exe |
 
 ---
 
