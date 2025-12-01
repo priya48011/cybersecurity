@@ -93,104 +93,109 @@ on the compromised system AZUKI-SL using Microsoft Defender for Endpoint logs.
 
 ---
 
-## Flag 0 — Starting Point Identification
+## Flag 1 — Remote Access Source
 
 ### Objective:
-Determine which endpoint is most likely associated with the initiation of suspicious activity in the Downloads folder. 
+
+Identify the source IP address of the Remote Desktop Protocol connection. 
 
 ### Finding: 
 
-Suspicious support-themed executions occurred on several systems, but gab-intern-vm matched all indicators (naming patterns, path, timing, intern-operated machine).
+On Nov 19, at 2025 10:36:18 AM, Attacker successfully gained access from Source "88.97.178.12"
 
 ### Query Used:
 ```
-DeviceProcessEvents 
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where FolderPath has @"\Downloads\" 
-    or ProcessCommandLine has @"\Downloads\"
-| where ProcessCommandLine has_any ("Downloads", "support", "help", "desk", "tool")
-    or FileName has_any ("Downloads", "support", "help", "desk", "tool")
+DeviceLogonEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where ActionType == "LogonSuccess"
+|order by Timestamp asc
+|project Timestamp, DeviceName, ActionType, LogonType, RemoteIP
 ```
-<img width="792" height="258" alt="image" src="https://github.com/user-attachments/assets/059556a3-4a03-4d8a-8137-e96b1acc0eac" />
+<img width="955" height="276" alt="image" src="https://github.com/user-attachments/assets/f6044772-757e-46c4-8e8f-4e268d5152bb" />
 
-**Flag Answer:** gab-intern-vm
+**Flag Answer:** 88.97.178.12
 
 ---
 
-## Flag 1 — Initial Execution Detection
+## Flag 2 — Compromised User Account
 
 ### Objective:
 
-Identify the first CLI parameter used during initial execution.
+Identify the user account that was compromised for initial access.
 
 ### Finding: 
 
--ExecutionPolicy was used to launch SupportTool.ps1. 
+All activities were performed from account "kenji.sato"
+
+### Query Used:
+```
+DeviceLogonEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where ActionType == "LogonSuccess"
+|order by Timestamp asc
+|project Timestamp, DeviceName, ActionType, LogonType, RemoteIP, AccountName
+
+```
+<img width="1085" height="210" alt="image" src="https://github.com/user-attachments/assets/8bd2c439-0f5a-4709-81a2-1b38a3d4de4b" />
+
+**Flag Answer:** kenji.sato
+
+---
+
+## Flag 3 — Network Reconnaissance
+
+### Objective:
+
+Identify the command and argument used to enumerate network neighbours
+
+### Finding:
+ARP scans were used to enumerate nearby hosts using commnad ""ARP.EXE" -a"
+
+
 
 ### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where FolderPath has @"\Downloads\" 
-    or ProcessCommandLine has @"\Downloads\"
-| project TimeGenerated, DeviceName, FileName, ProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="1163" height="176" alt="image" src="https://github.com/user-attachments/assets/a677ab7b-fdff-434a-8e45-ffb8796d8fe2" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine has_any("arp")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, ProcessCommandLine
 
-**Flag Answer:** -ExecutionPolicy
+```
+<img width="723" height="79" alt="image" src="https://github.com/user-attachments/assets/f89b0ed7-94c7-4837-9acb-707917edf6eb" />
+
+
+**Flag Answer:** "ARP.EXE" -a
 
 ---
 
-## Flag 2 — Defense Disabling (Staged Tamper)
+## Flag 4 — Malware Staging Directory
 
 ### Objective:
 
-Search for artifact creation or short-lived process activity that contains tamper-related content or simulated security posture changes.
+Identify the PRIMARY staging directory where malware was stored
 
 ### Finding:
 
-A shortcut file, DefenderTamperArtifact.lnk, was created and accessed. No real Defender settings were modified, suggesting it was staged.
-
-### Query Used:
-```
-DeviceFileEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated  between (datetime(2025-10-01)..datetime(2025-10-15))
-| where InitiatingProcessFileName in ("powershell.exe", "explorer.exe", "notepad.exe") 
-    and FileName contains "tamper"
-| project TimeGenerated, FileName, FolderPath, InitiatingProcessFileName, InitiatingProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="993" height="200" alt="image" src="https://github.com/user-attachments/assets/6f0e3cf8-2b49-437e-bd88-c481cbf7eb20" />
-
-**Flag Answer:** DefenderTamperArtifact.lnk
-
----
-
-## Flag 3 — Quick Data Probe
-
-### Objective:
-
-Detect opportunistic access to read transient data sources common on endpoints.
-
-### Finding:
-
-The actor probed the clipboard via PowerShell for sensitive data.
-
+The attacker executed attrib.exe on AZUKI-SL using the kenji.sato account to modify folder attributes and hide files. The directory where malware was stored: C:\ProgramData\WindowsCache
 ### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where ProcessCommandLine contains "clip"
-| project TimeGenerated, FileName, ProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="895" height="114" alt="image" src="https://github.com/user-attachments/assets/ca4cb02d-b84c-4026-8369-c4b664fb6ee4" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine has_any("mkdir", "New-Item", "attrib")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine
 
-**Flag Answer:** powershell.exe -NoProfile -Sta -Command "try { Get-Clipboard | Out-Null } catch { }"
+```
+<img width="1343" height="79" alt="image" src="https://github.com/user-attachments/assets/7cd439bf-3a14-4e39-b757-5e8f2819fe36" />
+
+**Flag Answer:** C:\ProgramData\WindowsCache
 
 ---
 
