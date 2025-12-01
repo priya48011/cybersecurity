@@ -199,178 +199,190 @@ DeviceProcessEvents
 
 ---
 
-## Flag 4 — Host Context Recon
+## Flag 5 — File Extension Exclusions
 
 ### Objective:
 
-Find activity that gathers basic host and user context to inform follow-up actions.
+Attackers add file extension exclusions to Windows Defender to prevent scanning of malicious files. Counting these exclusions reveals the scope of the attacker's defense evasion strategy.
 
 ### Finding:
 
-The actor used session enumeration commands to check active users.
+The attacker added 3 file extensions from MDE to prevent scanning. 
+### Query Used:
+```
+DeviceRegistryEvents
+|where DeviceName == "azuki-sl"
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where RegistryKey contains "Defender" and RegistryKey contains "Exclusions"
+and RegistryKey contains "Extensions"
+|summarize RegistryValueName = count()
+
+```
+<img width="206" height="79" alt="image" src="https://github.com/user-attachments/assets/5f60224b-df18-4a66-a5ee-7f047a94bc08" />
+
+**Flag Answer:** 3
+
+---
+
+## Flag 6 — Temporary Folder Exclusion
+
+### Objective:
+
+Attackers add folder path exclusions to Windows Defender to prevent scanning of directories used for downloading and executing malicious tools. These exclusions allow malware to run undetected.
+
+### Finding:
+
+The temporary folder that was excluded from MDE Scanning - C:\Users\KENJI~1.SAT\AppData\Local\Temp
+
+### Query Used:
+```
+DeviceRegistryEvents
+|where DeviceName == "azuki-sl"
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where RegistryKey contains @"Microsoft\Windows Defender\Exclusions\paths"
+|project Timestamp, RegistryValueName, RegistryKey
+
+```
+<img width="954" height="126" alt="image" src="https://github.com/user-attachments/assets/ab14dcf5-1451-4036-ac65-d6f0d0c06f20" />
+
+
+**Flag Answer:** C:\Users\KENJI~1.SAT\AppData\Local\Temp
+
+---
+
+## Flag 7 — Download Utility Abuse
+
+### Objective:
+
+Legitimate system utilities are often weaponized to download malware while evading detection. Identifying these techniques helps improve defensive controls.
+
+### Finding:
+
+The only tool actively used by kenji.sato on AZUKI-SL that can perform file download or data transfer operations was: certutil.exe
 
 ### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where ProcessCommandLine has_any ("qwi", "qwinsta", "query user", "quser")
-| project TimeGenerated, FileName, ProcessCommandLine
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine has_any ("http://","https://", "C:", "<>")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, InitiatingProcessCommandLine, ProcessVersionInfoOriginalFileName
+|distinct FileName
+
 ```
-<img width="552" height="175" alt="image" src="https://github.com/user-attachments/assets/0b77c32f-1167-4fc9-ad4c-04a9579875dd" />
+<img width="262" height="279" alt="image" src="https://github.com/user-attachments/assets/dc0599e6-3ab2-4d3a-9c31-9ce8b4608cd2" />
 
-**Flag Answer:** 2025-10-09T12:51:44.3425653Z
-
----
-
-## Flag 5 — Storage Surface Mapping
-
-### Objective:
-
-Detect disk enumeration.
-
-### Finding:
-
-Storage and filesystem enumeration occurred using WMIC logical disk queries.
-
-### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where ProcessCommandLine contains "wmic"
-    or FileName contains "wmic"
-| project TimeGenerated, FileName, ProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="714" height="91" alt="image" src="https://github.com/user-attachments/assets/7eab63d6-0eed-4b61-8daa-837eb2d887a2" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where FileName has_any ("powershell.exe","certutil.exe", "curl.exe")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, InitiatingProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
 
-**Flag Answer:** WMIC logical disk enumeration
+```
+
+<img width="1405" height="279" alt="image" src="https://github.com/user-attachments/assets/71a1f3b6-19e4-4311-8bc5-4e5fa6f86638" />
+
+**Flag Answer:** certutil.exe
 
 ---
 
-## Flag 6 — Connectivity & Name Resolution Check
+## Flag 8 — Scheduled Task Name
 
 ### Objective:
 
-Detect indicators of outbound connections and DNS resolution attempts. 
+Scheduled tasks provide reliable persistence across system reboots. The task name often attempts to blend with legitimate Windows maintenance routines.
 
 ### Finding:
 
-Connectivity checks were traced back to processes parented by RuntimeBroker.exe.
-
-### Query Used:
-```
-DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-09) .. datetime(2025-10-10))
-| where InitiatingProcessFileName in ("powershell.exe","cmd.exe") 
-| where ProcessCommandLine has_any ("ping","nslookup")
-| project TimeGenerated, DeviceName, InitiatingProcessFileName, InitiatingProcessCommandLine, InitiatingProcessParentFileName
-```
-<img width="936" height="166" alt="image" src="https://github.com/user-attachments/assets/9115cb3b-f967-4ec9-a80a-234e785aaa1b" />
-
-**Flag Answer:** RuntimeBroker.exe
-
----
-
-## Flag 7 — Interactive Session Discovery
-
-### Objective:
-
-Detect active user session enumeration.
-
-### Finding:
-
-Session enumeration was tied to a specific initiating process.
+Windows Update Check was the scheduled task. 
 
 **Query Used:**  
 ```
-DeviceProcessEvents 
-| where DeviceName == "gab-intern-vm" 
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15)) 
-| where InitiatingProcessFileName in ("powershell.exe","cmd.exe") 
-| where ProcessCommandLine contains "query session"
-| project TimeGenerated, DeviceName, ProcessCommandLine, InitiatingProcessCommandLine, InitiatingProcessFileName, InitiatingProcessUniqueId
-```
-<img width="1173" height="63" alt="image" src="https://github.com/user-attachments/assets/9cc4e4de-b72a-4455-a1e3-4d651853048b" />
+DeviceProcessEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine has_any ("schtasks.exe","/create")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
 
-**Flag Answer:** InitiatingProcessUniqueId 2533274790397065
+```
+<img width="1405" height="112" alt="image" src="https://github.com/user-attachments/assets/2d6bdda4-d36f-4964-ac2f-2b629d1ec68e" />
+
+
+**Flag Answer:** Windows Update Check
 
 ---
 
-## Flag 8 — Runtime Application Inventory
+## Flag 9 — Scheduled Task Target
 
 ### Objective:
 
-Detect enumeration of running applications and services to inform risk and opportunity.
+The scheduled task action defines what executes at runtime. This reveals the exact persistence mechanism and the malware location.
 
 ### Finding:
 
-The attacker listed running applications using tasklist.exe. 
+The executable path that was configured in scheduled task: C:\ProgramData\WindowsCache\svchost.exe 
 
 ### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where ProcessCommandLine has_any ("tasklist")
-| project TimeGenerated, FileName, ProcessCommandLine
-| order by TimeGenerated desc
-```
-<img width="559" height="62" alt="image" src="https://github.com/user-attachments/assets/79a1d2f7-7f74-490c-9e5e-3271304bec8b" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine has_any ("schtasks.exe","/create","/tr”")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
 
-**Flag Answer:** tasklist.exe
+```
+<img width="1405" height="303" alt="image" src="https://github.com/user-attachments/assets/6f83c955-df6c-424d-a3e2-606a059028c7" />
+
+**Flag Answer:** C:\ProgramData\WindowsCache\svchost.exe 
 
 ---
 
-## Flag 9 — Privilege Surface Check
+## Flag 10 — COMMAND & CONTROL - C2 Server Address
 
 ### Objective:
 
-Detect privilege mapping attempts.
+Command and control infrastructure allows attackers to remotely control compromised systems. Identifying C2 servers enables network blocking and infrastructure tracking.
 
 ### Finding:
 
-Privilege enumeration first detected at 2025-10-09T12:52:14.3135459Z. 
-
-### Query Used:
-```
-DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where ProcessCommandLine has_any ("whoami", "whoami /priv", "whoami /groups", "net user")
-| project TimeGenerated, FileName, ProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="584" height="259" alt="image" src="https://github.com/user-attachments/assets/e6b9a6b6-f2be-406f-ae3f-69a7adda9e25" />
-
-**Flag Answer:** 2025-10-09T12:52:14.3135459Z
-
----
-
-## Flag 10 — Proof-of-Access & Egress Validation
-
-### Objective:
-
-Collect evidence of outbound network checks and artifacts created as proof that the actor can view or collect host data.
-
-### Finding:
-
-Final instance of outbound connectivity was to www.msftconnecttest.com (IP = 23.218.218.182) over port 80. 
+IP address belongs to C2 server is 78.141.196.6
 
 ### Query Used:
 ```
 DeviceNetworkEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where InitiatingProcessUniqueId == 2533274790397065
-| project TimeGenerated, RemoteUrl, RemoteIP, RemotePort, InitiatingProcessFileName, InitiatingProcessCommandLine
-| order by TimeGenerated asc
-```
-<img width="1191" height="116" alt="image" src="https://github.com/user-attachments/assets/462e8997-8f8e-4f9b-810d-7ad88ae7a51d" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where InitiatingProcessAccountName == "kenji.sato"
+|where InitiatingProcessFileName == "certutil.exe"
+|project Timestamp, DeviceName, ActionType, RemoteIP, LocalIP,InitiatingProcessFileName, RemotePort
 
-**Flag Answer:** www.msftconnecttest.com
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/d5938053-e990-4119-ab48-6e1d8f3d7078" />
+
+**Flag Answer:** 78.141.196.6
+
+---
+
+## Flag 11 — C2 Communication Port
+
+### Objective:
+
+C2 communication ports can indicate the framework or protocol used. This information supports network detection rules and threat intelligence correlation.
+
+### Finding:
+
+Destination Port for C2 server is 443
+
+**Flag Answer:** 443
 
 ---
 
