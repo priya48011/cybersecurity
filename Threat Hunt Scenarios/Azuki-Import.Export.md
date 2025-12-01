@@ -647,23 +647,19 @@ DeviceNetworkEvents
 
 # Lessons Learned
 
-User directories remain among the highest-risk execution points.
-Fake artifacts can distort later investigations.
-Intern-operated systems require enhanced monitoring.
-Telemetry gaps (registry/log rollover) hinder complete analysis.
+The compromise of Azuki Import/Export’s IT admin workstation highlights the high risk of overused administrative accounts, insufficient endpoint hardening, and inadequate monitoring of critical security events. The attacker leveraged legitimate tools (LOTL), modified Defender exclusions, cleared logs, and exfiltrated sensitive data without detection. Weak segmentation, lack of multi-factor authentication, and absence of outbound data monitoring allowed rapid lateral movement and persistent access. Overall, the incident underscores the need for stronger privilege management, proactive monitoring, and hardened controls on high-value workstations.
 
 ---
 
 # Recommendations
 
-1. Quarantine infected endpoints.
-2. Delete SupportTool.ps1, DefenderTamperArtifact.lnk, ReconArtifacts.zip, and SupportChat_log.lnk.
-3. Remove SupportToolUpdater and registry key RemoteAssistUpdater
-4. Enforce PowerShell restrictions and enable script block logging.
-5. Block script execution from Downloads using AppLocker.
-6. Harden intern systems with least privilege + mandatory MFA.
-7. Monitor for recon commands (qwinsta, whoami, wmic, tasklist).
-8. Restrict outbound traffic to known-good destinations.
-9. Detect ZIP creation in public user paths.
-10. Alert on scheduled task creation and Run key changes.
-11. Train users on fake support session social engineering patterns.
+1. Immediately reset all administrative credentials and enforce strong password policies.
+2. Remove malicious scheduled tasks, hidden accounts, and files (e.g., WindowsCache, svchost.exe).
+3. Restore Microsoft Defender protections and remove any unauthorized exclusions.
+4. Block identified C2 IP (78.141.196.6) and monitor suspicious outbound traffic.
+5. Rebuild compromised workstations to ensure credential theft artifacts are removed.
+6. Enable alerts for high-risk events: log clearing, new local admin accounts, Defender exclusion changes, and unusual RDP logins.
+7. Implement MFA for all administrative and remote access accounts.
+8. Restrict and monitor the use of administrative tools (certutil, PowerShell, wevtutil, etc.) using AppLocker/WDAC policies.
+9. Segment networks to limit lateral movement and isolate administrative workstations.
+10. Deploy DLP and outbound traffic monitoring to prevent unauthorized data exfiltration.
