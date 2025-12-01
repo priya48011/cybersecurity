@@ -386,134 +386,242 @@ Destination Port for C2 server is 443
 
 ---
 
-## Flag 11 — Bundling / Staging Artifacts
+## Flag 12 — Credential Theft Tool
 
 ### Objective:
 
-Detect consolidation of artifacts into a single location or package for transfer.
+Credential dumping tools extract authentication secrets from system memory. These tools are typically renamed to avoid signature-based detection.
 
 ### Finding:
 
-Recon artifacts were bundled into a ZIP file.
-
-### Query Used:
-```
-DeviceFileEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-01) .. datetime(2025-10-15))
-| where InitiatingProcessUniqueId == 2533274790397065
-| where ActionType == "FileCreated"
-| where FileName contains ".zip"
-| project TimeGenerated, FileName, FolderPath, ActionType, InitiatingProcessFileName
-| order by TimeGenerated asc
-```
-<img width="1004" height="59" alt="image" src="https://github.com/user-attachments/assets/5083786f-0fa5-49f5-893b-dc7b6926e4fd" />
-
-**Flag Answer:** C:\Users\Public\ReconArtifacts.zip
-
----
-
-## Flag 12 — Outbound Transfer Attempt (Simulated)
-
-### Objective:
-
-Identify attempts to move data off-host or test upload capability.
-
-### Finding:
-
-After ReconArtifacts.zip was created, there were connection attempts to the outbound IP 100.29.147.161. No successful file upload confirmed. 
-
-### Query Used:
-```
-DeviceNetworkEvents 
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-09T12:58:17.4364257Z) .. datetime(2025-10-15))
-| where InitiatingProcessCommandLine == "\"powershell.exe\" "
-| where InitiatingProcessFileName in ("powershell.exe","cmd.exe")
-| project TimeGenerated, DeviceName, InitiatingProcessCommandLine, InitiatingProcessFileName, RemoteIP, RemoteUrl, RemotePort
-```
-<img width="1288" height="92" alt="image" src="https://github.com/user-attachments/assets/eee8c1df-c2cd-47fa-82a6-8c8334abcb8e" />
-
-**Flag Answer:** 100.29.147.161
-
----
-
-## Flag 13 — Scheduled Re-Execution Persistence
-
-### Objective:
-
-Detect creation of mechanisms that ensure the actor’s tooling runs again on reuse or sign-in.
-
-### Finding:
-
-A scheduled task named SupportToolUpdater ensured continued execution.
+The file name of credential dumping tool is mm.exe
 
 ### Query Used:
 ```
 DeviceProcessEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-09T12:58:17.4364257Z) .. datetime(2025-10-15))
-| where InitiatingProcessUniqueId == 2533274790397065
-| where ProcessCommandLine has_any ("schtasks", "Create")
-| project TimeGenerated, FileName, ProcessCommandLine, InitiatingProcessFileName, InitiatingProcessUniqueId
-| order by TimeGenerated asc
-```
-<img width="1406" height="233" alt="image" src="https://github.com/user-attachments/assets/1565c419-8d93-4077-a340-707b76ac2846" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where FileName has_any ("powershell.exe","certutil.exe", "curl.exe")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
 
-**Flag Answer:** SupportToolUpdater
+
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/c9c6910e-2d4c-4987-9389-518165572c05" />
+
+
+**Flag Answer:** mm.exe
 
 ---
 
-## Flag 14 — Autorun Fallback Persistence
+## Flag 13- CREDENTIAL ACCESS - Memory Extraction Module
 
-### Objective:
-
-Detect lightweight autorun entries placed as backup persistence in user scope.
+Credential dumping tools use specific modules to extract passwords from security subsystems. Documenting the exact technique used aids in detection engineering.
 
 ### Finding:
 
-Unable to retrieve autorun registry record in the available data due to data retention expiry. CTF Admin confirm RemoteAssistUpdater.
+sekurlsa::logonpasswords was used to logon passwords from memory. 
 
 ### Query Used:
 ```
-DeviceRegistryEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-09) .. datetime(2025-10-15))
-| project TimeGenerated, RegistryKey, RegistryValueName, RegistryValueData, ActionType
-| order by TimeGenerated asc
-```
-<img width="330" height="85" alt="image" src="https://github.com/user-attachments/assets/912a7b7b-4c72-47df-9405-84d72c4626ed" />
+DeviceProcessEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine  has_any ("::")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessCommandLine
 
-**Flag Answer:** RemoteAssistUpdater
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/ae36dad8-8bca-4dd5-a2fd-cc1ca4a085cb" />
+
+**Flag Answer:** sekurlsa::logonpasswords
 
 ---
 
-## Flag 15 — Planted Narrative / Cover Artifact
-
+## Flag 14- Data Staging Archive
 ### Objective:
 
-Identify narrative or misdirection artifacts.
+Attackers compress stolen data for efficient exfiltration. The archive filename often includes dates or descriptive names for the attacker's organisation.
 
 ### Finding:
 
-A shortcut file, SupportChat_log.lnk, was created and accessed. implying/mimicking help desk session. 
+The compressed archive filename used for data exfiltration is export-data.zip
+
+
+### Query Used:
+```
+DeviceProcessEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where FileName has_any ("powershell.exe","certutil.exe", "curl.exe")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
+
+```
+
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/ba611234-34ad-44bd-81b4-c144a95c7b5d" />
+
+**Flag Answer:** export-data.zip
+
+---
+
+## Flag 15- Exfiltration Channel
+
+### Objective:
+
+Cloud services with upload capabilities are frequently abused for data theft. Identifying the service helps with incident scope determination and potential data recovery.
+
+### Finding:
+
+The cloud service used to exfiltrate stolen data is discord
+
+### Query Used:
+```
+DeviceNetworkEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where InitiatingProcessAccountName == "kenji.sato"
+|project Timestamp, DeviceName, ActionType, RemoteIP, LocalIP,InitiatingProcessCommandLine, RemotePort
+
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/d176f1df-26c2-4a8d-bad7-5cd1fb6bd931" />
+
+**Flag Answer:** discord
+
+---
+
+## Flag 16 - Log Tampering
+### Objective:
+
+Clearing event logs destroys forensic evidence and impedes investigation efforts. The order of log clearing can indicate attacker priorities and sophistication.
+
+### Finding:
+
+The first Windows event log cleared by the attacker is Security 
+
+### Query Used:
+```
+DeviceProcessEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine  has_any ("wevtutil.exe")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessVersionInfoOriginalFileName
+
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/344f1810-8a86-4a51-86b7-bf2955af128e" />
+
+
+**Flag Answer:** Security
+
+---
+
+## Flag 17 - Persistence Account
+### Objective:
+
+Hidden administrator accounts provide alternative access for future operations. These accounts are often configured to avoid appearing in normal user interfaces.
+
+### Finding:
+
+The backdoor account username created by the attacker is support
+
+### Query Used:
+```
+DeviceProcessEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where AccountName == "kenji.sato"
+|where ProcessCommandLine  has_any (" /add")
+|order by Timestamp asc
+|project Timestamp, DeviceName, AccountName, FileName, FolderPath, ProcessCommandLine, InitiatingProcessCommandLine
+
+```
+<img width="1405" height="93" alt="image" src="https://github.com/user-attachments/assets/e808f405-7390-4063-a4b3-e8be0f6fcaaf" />
+
+**Flag Answer:** support
+
+---
+
+## Flag 18 - Malicious Script
+### Objective:
+
+Attackers often use scripting languages to automate their attack chain. Identifying the initial attack script reveals the entry point and automation method used in the compromise.
+
+### Finding:
+
+PowerShell script file used to automate the attack chain is  wupdate.ps1
 
 ### Query Used:
 ```
 DeviceFileEvents
-| where DeviceName == "gab-intern-vm"
-| where TimeGenerated between (datetime(2025-10-09T12:58:17.4364257Z) .. datetime(2025-10-15))
-| where ActionType == "FileCreated" 
-    or ActionType == "FileModified"
-| where FileName endswith ".txt" 
-    or FileName endswith ".lnk" 
-    or FileName endswith ".log"
-| project TimeGenerated, FileName, ActionType, FolderPath, InitiatingProcessFileName
-| order by TimeGenerated asc
-```
-<img width="987" height="144" alt="image" src="https://github.com/user-attachments/assets/5d938ada-bd17-4bff-b0b9-295b2ea5cc55" />
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where InitiatingProcessAccountName == "kenji.sato"
+|where FolderPath has_any ("temp", "download")
+|project Timestamp, DeviceName, ActionType, FileName, FolderPath
 
-**Flag Answer:** SupportChat_log.lnk
+```
+<img width="855" height="252" alt="image" src="https://github.com/user-attachments/assets/3205e3ed-d4db-4088-a555-91b297112171" />
+
+
+**Flag Answer:**  wupdate.ps1
+
+---
+
+## Flag 19 - LATERAL MOVEMENT - Secondary Target
+### Objective:
+
+Lateral movement targets are selected based on their access to sensitive data or network privileges. Identifying these targets reveals attacker objectives.
+
+### Finding:
+
+IP address was targeted for lateral movement is 10.1.0.188
+
+### Query Used:
+```
+DeviceNetworkEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where InitiatingProcessAccountName == "kenji.sato"
+|where InitiatingProcessCommandLine has_any ("cmdkey", "mstsc")
+|project Timestamp, DeviceName, ActionType, RemoteIP, InitiatingProcessCommandLine
+
+
+```
+<img width="969" height="252" alt="image" src="https://github.com/user-attachments/assets/80fc2ad0-dd6d-403c-94b1-4f59984299ca" />
+
+**Flag Answer:**  10.1.0.188
+
+---
+
+## Flag 20 - LATERAL MOVEMENT - Remote Access Tool
+
+### Objective:
+
+Built-in remote access tools are preferred for lateral movement as they blend with legitimate administrative activity. This technique is harder to detect than custom tools.
+
+### Finding:
+
+The remote access tool used for lateral movement is mstsc.exe
+
+### Query Used:
+```
+DeviceNetworkEvents
+|where Timestamp between (datetime(2025-11-19) .. datetime(2025-11-20))
+|where DeviceName == "azuki-sl"
+|where InitiatingProcessAccountName == "kenji.sato"
+|where InitiatingProcessCommandLine has_any ("cmdkey", "mstsc")
+|project Timestamp, DeviceName, ActionType, RemoteIP, InitiatingProcessCommandLine
+
+
+```
+<img width="969" height="252" alt="image" src="https://github.com/user-attachments/assets/80fc2ad0-dd6d-403c-94b1-4f59984299ca" />
+
+**Flag Answer:**  mstsc.exe
 
 ---
 
