@@ -10,6 +10,7 @@ I am a Cybersecurity enthusiast | Passionate about securing digital systems and 
 |-----------------------------------------------|----------------------------|
 | ⚠️ Vulnerbility Management Program | <a href="https://github.com/priya48011/Vulnerability-Management">Project</a>|
 | 🚨 Threat Hunting and Security Operations | <a href="https://github.com/priya48011/threat-hunting-scenario-tor">Threat Hunting Scenerio (TOR Browser Usage)</a>|
+| 🚨 Threat Hunting and Security Operations | <a href="https://github.com/priya48011/threat-hunting-scenario-tor">Threat Hunting Scenerio (TOR Browser Usage)</a>|
 | Home Lab Setup, Virtual Network Attack and Defense Simulation | <a href="https://github.com/priya48011/Virtual-Network-Attack-and-Defense-Simulation">Detection Lab</a>|
 | SSH Protection Using Fail2Ban         | <a href="https://github.com/priya48011/Fail2Ban/tree/main">Detection Lab</a>|
 | Apache Web Server Installation and Configuration on Ubuntu         | <a href="https://github.com/priya48011/Apache-Web-Server">Detection Lab</a>|
