@@ -11,20 +11,34 @@
 
 ## Summary
 
-During early October 2025, multiple endpoints executed suspicious support-themed files from the Downloads directory. These items contained keywords such as support, help, desk, and tool, and intern-operated systems appeared most impacted. Among all hosts, gab-intern-vm revealed the earliest activity matching the pattern. What seemed to be a routine remote support session instead represented a structured sequence of reconnaissance, validation, staging, and persistence actions. The actor used helpdesk-themed filenames to disguise their intrusion and activity. 
+Azuki Import/Export experienced a targeted compromise resulting in the theft of supplier contracts and pricing data, which later appeared on underground forums. The investigation identified unauthorized remote access to the IT administrator workstation (AZUKI-SL), followed by credential abuse, data discovery, data staging, and exfiltration using living-off-the-land (LOTL) tools. The adversary also attempted to establish persistence and cover their tracks. The activity is consistent with financially motivated corporate espionage.
+
+### Scope
+
+This report analyzes activity occurring between
+2025-11-19 to 2025-11-20
+on the compromised system AZUKI-SL using Microsoft Defender for Endpoint logs.
+
+### The investigation addresses:
+
+- Initial access method  
+- Compromised accounts  
+- Data accessed or stolen  
+- Exfiltration method  
+- Persistence attempts  
+- Remaining risk
 
 ### Key actions included:
 
-- Execution of a PowerShell script from Downloads
-- Staged artifact creation
-- Reconnaissance covering clipboard, session data, privileges, processes, and storage  
-- Outbound connectivity validation  
-- Creation of a ZIP archive staging recon data  
-- Outbound connections to external IPs  
-- Scheduled task and autorun registry persistence  
-- Dropping a “support chat log” as narrative misdirection  
-
-DefenderTamperArtifact.lnk and SupportChat_log.lnk suggest intentional misdirection designed to appear as a legitimate support session.
+- Remote logon to AZUKI-SL using stolen administrative credentials.
+- All malicious activity occurred under kenji.sato (IT admin) account.
+- Directory and file enumeration using mkdir, attrib, and New-Item.
+- Modification of Windows Defender exclusions to bypass malware detection.
+- Deletion or clearing of event logs using wevtutil.exe.
+- Usage of native tools (powershell.exe, certutil.exe, curl.exe) to download or stage files. 
+- Creation of a scheduled task (schtasks.exe /create) to maintain access. 
+- Dropping a “support chat log” as narrative misdirection
+- Attempts to hide traces of activity and avoid detection.
 
 ---
 
@@ -32,42 +46,45 @@ DefenderTamperArtifact.lnk and SupportChat_log.lnk suggest intentional misdirect
 
 ### Data sources analyzed:
 
-- DeviceProcessEvents  
-- DeviceFileEvents  
+- DeviceLogonEvents
+- DeviceProcessEvents   
 - DeviceNetworkEvents  
 - DeviceRegistryEvents  
 
 ### Objectives:
 
-- Identify earliest execution  
-- Reconstruct recon sequence  
-- Identify staging and simulated exfil attempts  
-- Identify persistence  
-- Detect planted narrative artifacts  
-- Align with MITRE ATT&CK  
-
+- Identify how the attacker gained initial access and which accounts were compromised.
+- Reconstruct attacker activity, including reconnaissance, data staging, and exfiltration attempts.
+- Detect persistence mechanisms such as scheduled tasks and autorun registry entries.
+- Assess what sensitive data was accessed or stolen and the overall business impact.
+- Align with MITRE ATT&CK 
+- Provide recommendations for containment, remediation, and improved monitoring.
 ---
 
-# Attack Timeline
+# Flag Summary Table
 
 | Flag | Phase / Focus | Key Event |
 |------|---------------|-----------|
-| 0 | Starting Point Identification | gab-intern-vm first to show support-themed execution |
-| 1 | Initial Execution | PowerShell ran script using -ExecutionPolicy bypass |
-| 2 | Defense Deception | DefenderTamperArtifact.lnk accessed |
-| 3 | Quick Data Probe | Get-Clipboard usage |
-| 4 | Host / Session Recon | qwinsta and query user activity |
-| 5 | Storage Enumeration | Logical disk enumeration via WMIC |
-| 6 | Connectivity / Egress Check | Outbound checks parented by RuntimeBroker |
-| 7 | Interactive Session Discovery | Query session tied to UniqueProcessId |
-| 8 | Runtime Application Inventory | tasklist.exe |
-| 9 | Privilege Surface Check | whoami /groups |
-| 10 | Proof-of-Access & Egress Validation | First outbound web contact: msftconnecttest.com |
-| 11 | Artifact Staging | ReconArtifacts.zip created |
-| 12 | Simulated Outbound Transfer | Contact to 100.29.147.161 |
-| 13 | Scheduled Task Persistence | SupportToolUpdater task created |
-| 14 | Autorun Fallback Persistence | Autorun entry: RemoteAssistUpdater |
-| 15 | Planted Narrative Artifact | SupportChat_log.lnk created |
+| 1 | Initial Access Validation | Successful remote logon to AZUKI-SL from 88.97.178.12 |
+| 2 | Account Compromise Confirmation | All activity executed under compromised kenji.sato admin account |
+| 3 | Network Reconnaissance | `"ARP.EXE" -a` ARP scans to enumerate nearby hosts |
+| 4 | Malware Staging Directory | `C:\ProgramData\WindowsCache` |
+| 5 | File Extension Exclusions | 3 Extensions were Exluded from MDE Scanning |
+| 6 | Temporary Folder Exclusion | `C:\Users\KENJI~1.SAT\AppData\Local\Temp` was excluded from MDE Scanning |
+| 7 | Download Utility Abuse | `certutil.exe` was abused to download files |
+| 8 | Scheduled Task Name | Windows Update Check |
+| 9 | Scheduled Task Target | Executable path configured `C:\ProgramData\WindowsCache\svchost.exe` |
+| 10 | C2 Server Address | 78.141.196.6 |
+| 11 | C2 Communication Port | 443 |
+| 12 | Credential Theft Tool | mm.exe |
+| 13 | Memory Extraction Module | sekurlsa::logonpasswords|
+| 14 | Data Staging Archive | export-data.zip |
+| 15 | Exfiltration Channel | discord |
+| 16 | Log Tampering | Security |
+| 17 | Persistence Account | support was created |
+| 18 | Malicious Script File |  wupdate.ps1 |
+| 19 | Secondary Target | 10.1.0.188 was target for lateral movement |
+| 20 | Remote Access Tool | mstsc.exe used for lateral movement |
 
 ---
 
